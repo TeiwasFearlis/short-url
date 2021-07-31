@@ -8,10 +8,10 @@ import org.springframework.context.annotation.ComponentScan;
 @SpringBootApplication
 @EnableAutoConfiguration
 @ComponentScan("ru.test")
-public class TestMvcApplication {
+public class TestWebFluxApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(TestMvcApplication.class, args);
+		SpringApplication.run(TestWebFluxApplication.class, args);
 	}
 
 }

@@ -1,12 +1,13 @@
-package ru.test.dateBase;
+package ru.test.dataBase;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.web.server.ResponseStatusException;
 import ru.test.keyGeneration.KeyCreater;
-
 import java.util.List;
 
-public class PostgreDataBase implements DataBaseChecking {
+public class PostgreDataBase implements DataBase {
 
     @Autowired
     KeyCreater keyCreater;
@@ -38,11 +39,14 @@ public class PostgreDataBase implements DataBaseChecking {
     }
 
 
+
     @Override
     public String returnUrl(String key) {
-        String url = jdbcTemplate.queryForObject("SELECT url From public.url_table Where key='" + key + "'",
-                String.class);
-        return url;
+        String url = "SELECT url From public.url_table Where key='" + key + "'";
+        List<String> stringList = jdbcTemplate.queryForList(url, String.class);
+        if (!stringList.isEmpty()) {
+            return stringList.get(0);
+        }
+        throw new ResponseStatusException(HttpStatus.NOT_FOUND);
     }
-
 }
