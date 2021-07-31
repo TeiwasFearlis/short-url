@@ -5,11 +5,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.server.*;
-import ru.test.dateBase.DataBaseChecking;
-import ru.test.dateBase.PostgreDataBase;
+import ru.test.dataBase.DataBase;
+import ru.test.dataBase.PostgreDataBase;
 import ru.test.keyGeneration.KeyCreater;
-
-
 import java.net.URI;
 import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
@@ -27,9 +25,11 @@ public class SpringConfiguration {
 
 
     @Bean
-    public DataBaseChecking postgreDataBase() {
+    public DataBase postgreDataBase() {
         return new PostgreDataBase();
     }
+
+
 
 
     @Bean
@@ -43,10 +43,13 @@ public class SpringConfiguration {
                             String url = serverRequest.queryParam("url").get();
                             return ServerResponse
                                     .ok()
-                                    .body(BodyInserters.fromValue(postgreDataBase().addInDB(url)));
+                                    .body(BodyInserters.fromValue(postgreDataBase().addInDB(url)
+                                            +serverRequest.headers()));//todo delete headers
                         });
 
     }
+
+
 
 }
 
