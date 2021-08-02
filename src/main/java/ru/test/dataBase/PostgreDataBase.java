@@ -61,7 +61,6 @@ public class PostgreDataBase implements DataBase {
         List<String> stringList = jdbcTemplate.queryForList(url, String.class);
         if (!stringList.isEmpty()) {
             Date date = new Date();
-            System.out.println(date);
             jdbcTemplate.update("INSERT INTO public.save_redirect(url,date,headers)" +
                     " VALUES('" + stringList.get(0) + "','"+ date +"','" + getAllHeadersAsString(request) + "')");
             return stringList.get(0);
