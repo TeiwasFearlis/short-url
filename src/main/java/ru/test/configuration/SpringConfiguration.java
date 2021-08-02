@@ -9,6 +9,7 @@ import ru.test.dataBase.DataBase;
 import ru.test.dataBase.PostgreDataBase;
 import ru.test.keyGeneration.KeyCreater;
 import java.net.URI;
+
 import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
 
@@ -16,6 +17,7 @@ import static org.springframework.web.reactive.function.server.RouterFunctions.r
 @Configuration
 
 public class SpringConfiguration {
+
 
 
     @Bean
@@ -31,24 +33,24 @@ public class SpringConfiguration {
 
 
 
-
     @Bean
     RouterFunction<ServerResponse> routerFunction() {
 
-        return route(GET("/somethingServer/{key}"), req ->
-                ServerResponse.temporaryRedirect(URI.create(postgreDataBase().returnUrl(req.pathVariable("key"))))
-                        .build())
+        return route(GET("/go/{key}"), req -> {
+                   // logger.info(getAllHeadersAsString(req));
+                    return ServerResponse.temporaryRedirect(URI.create(postgreDataBase().returnUrl(req.pathVariable("key"),req)))
+                            .build();
+                }
+        )
                 .andRoute(RequestPredicates.GET("/saveUrl")
                         , serverRequest -> {
                             String url = serverRequest.queryParam("url").get();
                             return ServerResponse
                                     .ok()
-                                    .body(BodyInserters.fromValue(postgreDataBase().addInDB(url)
-                                            +serverRequest.headers()));//todo delete headers
+                                    .body(BodyInserters.fromValue(postgreDataBase().addInDB(url)));
                         });
 
     }
-
 
 
 }
