@@ -26,10 +26,24 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
+	implementation("org.liquibase:liquibase-core")
 	runtimeOnly("org.postgresql:postgresql")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
+	testImplementation("io.zonky.test:embedded-database-spring-test:2.0.1")
+	testImplementation("io.zonky.test:embedded-postgres:1.3.0")
 	testImplementation("io.projectreactor:reactor-test")
+
 }
+
+tasks {
+	withType<Test> {
+		useJUnitPlatform()
+	}
+	named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
+		jvmArgs("-Xmx512M", "-Dspring.profiles.active=development")
+	}
+}
+
 
 
 tasks.withType<KotlinCompile> {

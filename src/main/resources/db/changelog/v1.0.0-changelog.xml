@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xmlns:pro="http://www.liquibase.org/xml/ns/pro"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd
+http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-4.1.xsd">
+
+    <changeSet author="Anton" id="create_url_table">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="url_table"/>
+            </not>
+        </preConditions>
+        <createTable tableName="url_table">
+            <column name="id" autoIncrement="true" type="bigint" startWith="10000">
+                <constraints primaryKey="true" nullable="false" unique="true"/>
+            </column>
+            <column name="url" type="varchar">
+                <constraints nullable="false" unique="true"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet author="Anton" id="create_save_redirect">
+        <createTable tableName="save_redirect">
+            <column name="id" autoIncrement="true" type="bigint">
+                <constraints primaryKey="true" nullable="false" unique="true"/>
+            </column>
+            <column name="url"  type="varchar"  >
+                <constraints  nullable="false"/>
+            </column>
+            <column name="headers" type="varchar">
+                <constraints nullable="false" />
+            </column>
+            <column name="date" type="timestamp">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>
