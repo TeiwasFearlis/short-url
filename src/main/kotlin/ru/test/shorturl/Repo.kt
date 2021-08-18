@@ -2,7 +2,8 @@ package ru.test.shorturl
 
 import org.springframework.web.reactive.function.server.ServerRequest
 
-interface DataBase {
+interface Repo {
     fun addInDB(url: String):String
-    fun returnUrl(id: String, request: ServerRequest):String
+    fun saveRedirect(url: String, headers: String)
+    fun getUrl(id: String):String?
 }

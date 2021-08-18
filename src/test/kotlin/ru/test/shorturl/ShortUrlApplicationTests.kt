@@ -10,9 +10,11 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.web.server.ResponseStatusException
 import org.springframework.web.util.UriBuilder
+import java.lang.IllegalStateException
 import java.util.function.Consumer
 
 
@@ -22,26 +24,20 @@ import java.util.function.Consumer
 @AutoConfigureEmbeddedDatabase(provider = AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY, type = AutoConfigureEmbeddedDatabase.DatabaseType.POSTGRES)
 class ShortUrlApplicationTests {
 
-//    @MockBean
-//    lateinit var extensionFunc : ExtensionFunc
 
     @Autowired
     lateinit var webClient: WebTestClient
 
     @Autowired
-    lateinit var extensionFunc: ExtensionFunc
+    lateinit var urlRepo: UrlRepo
+
+    @Autowired
+    lateinit var jdbcTemplate: JdbcTemplate
 
 
     @Test
     fun saveAndRedirectUrlGoodTest() {
-
-        val url: String = "https://mister11.github.io/posts/testing_spring_webflux_application/"
-        val id: Int = 10000
-        val result: String = "localhost:8080/go/${id.toString(36)}"
-
-
-        Assertions.assertTrue(extensionFunc.addInDB(url).equals(result))
-
+        val url = "https://www.google.com"
         webClient.get()
                 .uri { uriBuilder: UriBuilder ->
                     uriBuilder
@@ -51,20 +47,29 @@ class ShortUrlApplicationTests {
                 }
                 .exchange()
                 .expectStatus().isOk
+                .expectBody().consumeWith {
+                    if (it.responseBody == null) {
+                        throw IllegalStateException("Empty body")
+                    } else {
+                        val body = String(it.responseBody as ByteArray)
+                        //localhost:8080/go/h42h4h2
+                        val key=body.substring(body.indexOf("go/")+3)
+                        Assertions.assertNotNull(urlRepo.getUrl(key))
 
+                        webClient.get().uri("/go/{key}", key)
+                                .exchange()
+                                .expectStatus().isTemporaryRedirect
 
-        webClient.get().uri("/go/{key}", id.toString(36))
-                .exchange()
-                .expectStatus().isTemporaryRedirect
-
-
+                        //TODO check log row exist
+                    }
+                }
     }
 
     @Test
     fun badResultTest() {
 
         val url: String = "ttps://mister11.github.io/posts/testing_spring_webflux_application/"// нарушен протокол (ошибка синтаксиса)
-        val exception = Assertions.assertThrows(ResponseStatusException::class.java) { extensionFunc.addInDB(url) }
+        val exception = Assertions.assertThrows(ResponseStatusException::class.java) { urlRepo.addInDB(url) }
         Assertions.assertEquals("400 BAD_REQUEST", exception.message)//TODO возможно это одно и тоже, что и вебклиент ниже
 
         webClient.get()
@@ -83,7 +88,7 @@ class ShortUrlApplicationTests {
     fun badResultTest2() {
 
         val url: String = "https/mister11.github.io/posts/testing_spring_webflux_application/"// нарушен протокол (ошибка синтаксиса)
-        val exception = Assertions.assertThrows(ResponseStatusException::class.java) { extensionFunc.addInDB(url) }
+        val exception = Assertions.assertThrows(ResponseStatusException::class.java) { urlRepo.addInDB(url) }
         Assertions.assertEquals("400 BAD_REQUEST", exception.message)
 
         webClient.get()
@@ -98,12 +103,9 @@ class ShortUrlApplicationTests {
     }
 
     @Test
-    fun badResultTest3() {
+    fun `test failed url`() {
 
         val url: String = "https://mister11.github.io/posts/testing_spring_webflux_application/"
-        val id: Int = 10000
-        val result: String = "localhost:8080/go/${id.toString(36)}"
-
 
         webClient.get()
                 .uri { uriBuilder: UriBuilder ->

@@ -1,21 +1,5 @@
 package ru.test.dataBase;
 
-import org.jetbrains.annotations.NotNull;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.reactive.function.server.ServerRequest;
-import org.springframework.web.server.ResponseStatusException;
-import ru.test.shorturl.DataBase;
-
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.sql.Timestamp;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
-
 //
 //public class PostgreDataBase implements DataBase {
 //

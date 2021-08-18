@@ -1,18 +1,9 @@
 package ru.test.configuration;
 
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.server.*;
 //import ru.test.dataBase.DataBase;
 //import ru.test.dataBase.PostgreDataBase;
-import ru.test.shorturl.DataBase;
 
-import java.net.URI;
-
-import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
 
 //
