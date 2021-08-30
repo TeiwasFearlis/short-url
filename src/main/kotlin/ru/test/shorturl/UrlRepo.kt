@@ -1,59 +1,71 @@
 package ru.test.shorturl
 
 
-import org.springframework.beans.factory.annotation.Autowired
+import io.r2dbc.spi.ConnectionFactory
+import io.r2dbc.spi.Row
 import org.springframework.dao.EmptyResultDataAccessException
-import org.springframework.http.HttpStatus
-import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.web.server.ResponseStatusException
-import java.net.MalformedURLException
-import java.net.URL
-
-class UrlRepo(val hostName: String, val schema: String) : Repo {
-
-    @Autowired
-    lateinit var jdbcTemplate: JdbcTemplate
+import org.springframework.r2dbc.core.*
 
 
-    override fun addInDB(url: String): String {
-        //val ur = URL(url)//TODO почему не предлагает try/catch
-        var ur: URL? = null
+
+class UrlRepo(private val schema: String, connectionFactory: ConnectionFactory) : Repo {
+
+    private val client = DatabaseClient.create(connectionFactory)
+
+
+
+    override suspend fun addInDB(url: String): String? {
         try {
-            ur = URL(url)
-        } catch (e: MalformedURLException) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST)
-        }
-        val searchInColumnUrl = "SELECT url From $schema.url_table Where url='$url'"
-        val stringList: List<String> = jdbcTemplate.queryForList(searchInColumnUrl, String::class.java)
-        if (stringList.isNotEmpty()) {
-            val returnKey = jdbcTemplate
-                    .queryForObject("SELECT id From $schema.url_table Where url='$url'", Int::class.java)
-
-            if (returnKey != null)
-                return "$hostName${returnKey.toString(36)}"
-        }
-        jdbcTemplate.update("INSERT INTO $schema.url_table(url)" +
-                " VALUES('$url')")
-        val sqlCheckUrl = "SELECT id From $schema.url_table Where url='$url'"
-        val list = jdbcTemplate.queryForList(sqlCheckUrl, Int::class.java)
-        return "$hostName${list[0].toString(36)}"
+            val existUrl: Long? =
+                   client.sql("SELECT id From $schema.url_table where url=:url")
+                    .bind("url", url)
+                    .map { row: Row->
+                        row.get(0) as Long?
+                    }
+                           .awaitOneOrNull()
+            if (existUrl != null )
+                return existUrl.toString(36)
+        }catch (e: EmptyResultDataAccessException ){}
+        client.sql("INSERT INTO $schema.url_table(url)" +
+                " VALUES(:url)")
+                .bind("url", url)
+                .await()
+          return  client
+                    .sql("SELECT id From $schema.url_table" +
+                            " Where url=:url")
+                    .bind("url", url)
+                    .map { row: Row ->
+                        row.get("id") as Long
+                    }
+                    .awaitSingleOrNull()?.toString(36)
     }
 
 
-    override fun saveRedirect(url: String, headers: String) {
-        jdbcTemplate.update("INSERT INTO $schema.save_redirect(url,date,headers)" +
-                " VALUES('${url}', CURRENT_TIMESTAMP,'${headers}')")
+
+
+    override suspend fun saveRedirect(url: String, headers: String) {
+        client.sql("INSERT INTO $schema.save_redirect(url,date,headers)" +
+                " VALUES(:url, CURRENT_TIMESTAMP,:headers)")
+                .bind("url",url)
+                .bind("headers",headers)
+                .await()
     }
 
-    override fun getUrl(id: String): String? {
+
+
+
+    override suspend fun getUrl(id: String): String? {
         val returnKeyInId: Long = id.toLong(36)
-        return try {
-            jdbcTemplate.queryForObject("SELECT url From $schema.url_table Where id='$returnKeyInId'",
-                    String::class.java)
-        } catch (e: EmptyResultDataAccessException) {
-            null
-        }
+        return   try {
+        client.sql("SELECT url From $schema.url_table Where id='$returnKeyInId'")
+                    //.bind("id", returnKeyInId)//Todo почему не работает с этим параметром?
+                    .map { row: Row ->
+                        row.get("url") as String
+                    }
+                    .awaitSingleOrNull()
+         } catch (e: EmptyResultDataAccessException) {
+           null
+       }
     }
-
 
 }
