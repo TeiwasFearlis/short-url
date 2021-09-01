@@ -34,7 +34,7 @@ fun getAllHeadersAsString(request: ServerRequest): String {
 
 val apiInitializer: ApplicationContextInitializer<GenericApplicationContext> = beans {
 
-    bean {
+    bean <Repo>{
         UrlRepo(env.getRequiredProperty("db.schema"), ref())
     }
 

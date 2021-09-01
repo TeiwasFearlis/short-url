@@ -2,37 +2,34 @@ package ru.test.shorturl
 
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
-import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.reactive.server.WebTestClient
-import org.springframework.web.server.ResponseStatusException
 import org.springframework.web.util.UriBuilder
-import java.lang.IllegalStateException
 import java.util.function.Consumer
 
-
-@SpringBootTest
-@AutoConfigureWebTestClient
+//@DataR2dbcTest
+@SpringBootTest(classes = [BlogApplication::class], webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(EmbeddedPostgresConfiguration::class)
 @AutoConfigureEmbeddedDatabase(provider = AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY, type = AutoConfigureEmbeddedDatabase.DatabaseType.POSTGRES)
-class ShortUrlApplicationTests {
+@ActiveProfiles("test")
+class ShortUrlApplicationTests(/*@Autowired urlRepo: UrlRepo*/) {
 
 
     @Autowired
     lateinit var webClient: WebTestClient
 
-    @Autowired
-    lateinit var urlRepo: Repo
+    //@Autowired
+    //lateinit var urlRepo: Repo
+//
+//    @Autowired
+//    lateinit var template: JdbcTemplate
 
-    @Autowired
-    lateinit var template: JdbcTemplate
 
 
 
@@ -40,6 +37,7 @@ class ShortUrlApplicationTests {
     @Test
     fun saveAndRedirectUrlGoodTest() {
         val url = "https://www.google.com"
+        var key = ""
         webClient.get()
                 .uri { uriBuilder: UriBuilder ->
                     uriBuilder
@@ -55,17 +53,21 @@ class ShortUrlApplicationTests {
                     } else {
                         val body = String(it.responseBody as ByteArray)
                         //localhost:8080/go/h42h4h2
-                        val key=body.substring(body.indexOf("go/")+3)
-                        Assertions.assertNotNull(urlRepo.getUrl(key))
-
-                        webClient.get().uri("/go/{key}", key)
-                                .exchange()
-                                .expectStatus().isTemporaryRedirect
-
+                        key = body.substring(body.indexOf("go/") + 3)
                         //TODO check log row exist
+
                     }
                 }
+
+        //Assertions.assertNotNull(urlRepo.getUrl(key))
+
+        webClient.get().uri("/go/{key}", key)
+                .exchange()
+                .expectStatus().isTemporaryRedirect
+
     }
+
+
 //
 //    @Test
 //    fun badResultTest() {
@@ -112,7 +114,7 @@ class ShortUrlApplicationTests {
         webClient.get()
                 .uri { uriBuilder: UriBuilder ->
                     uriBuilder
-                            .path("/saveUrl/")
+                            .path("/save/")
                             .queryParam("url", url)
                             .build()
                 }
@@ -134,9 +136,20 @@ class ShortUrlApplicationTests {
 }
 
 @Configuration
-class EmbeddedPostgresConfiguration {
+class EmbeddedPostgresConfiguration  {
     @Bean
     fun embeddedPostgresCustomizer(): Consumer<EmbeddedPostgres.Builder> {
-        return Consumer<EmbeddedPostgres.Builder> { builder -> builder.setPort(7432) }
+        return Consumer<EmbeddedPostgres.Builder> { builder -> builder.setPort(7887) }
     }
+
+//
+//    @Value("\${db.schema}")
+//    lateinit var dbschema: String
+//
+//    lateinit var connectionFactory: ConnectionFactory
+//
+//    @Bean
+//    fun urlRepo(): Repo {
+//        return UrlRepo(dbschema, connectionFactory)
+//    }
 }

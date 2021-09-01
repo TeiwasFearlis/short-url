@@ -20,10 +20,12 @@ repositories {
 
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
-	implementation("org.springframework.boot:spring-boot-starter-jdbc")
+	//implementation("org.springframework.boot:spring-boot-starter-jdbc")
 
 	implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
+	implementation("io.projectreactor:reactor-test")
 	runtimeOnly("io.r2dbc:r2dbc-postgresql")
+	implementation("org.springframework:spring-jdbc")
 
 	runtimeOnly("org.postgresql:postgresql")
 
@@ -35,10 +37,15 @@ dependencies {
 
 	implementation("org.liquibase:liquibase-core")
 
-	testImplementation("org.springframework.boot:spring-boot-starter-test")
+	testImplementation("org.springframework.boot:spring-boot-test")
+	testImplementation("org.junit.jupiter:junit-jupiter:5.7.2")
 	testImplementation("io.zonky.test:embedded-database-spring-test:2.0.1")
+	testImplementation("io.zonky.test.postgres:embedded-postgres-binaries-bom:12.1.0-1")
 	testImplementation("io.zonky.test:embedded-postgres:1.3.0")
 	testImplementation("io.projectreactor:reactor-test")
+
+	testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
+
 
 }
 
