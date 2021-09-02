@@ -18,10 +18,14 @@ import java.net.URL
 @SpringBootApplication
 class BlogApplication
 
-fun main(args: Array<String>) {
-    runApplication<BlogApplication>(*args) {
-        addInitializers(apiInitializer)
+object AppInitializer : ApplicationContextInitializer<GenericApplicationContext> {
+    override fun initialize(applicationContext: GenericApplicationContext) {
+        apiInitializer.initialize(applicationContext)
     }
+}
+
+fun main(args: Array<String>) {
+    runApplication<BlogApplication>(*args)
 }
 
 fun getAllHeadersAsString(request: ServerRequest): String {

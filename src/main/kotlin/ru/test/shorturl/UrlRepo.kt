@@ -19,7 +19,7 @@ class UrlRepo(private val schema: String, connectionFactory: ConnectionFactory) 
     override suspend fun addInDB(url: String): String? {
         try {
             val existUrl: Long? =
-                    client.sql("SELECT id From $schema.url_table where url=:url")
+                    client.sql("SELECT id From public.url_table where url=:url")
                             .bind("url", url)
                             .map { row: Row ->
                                 row.get(0) as Long?
