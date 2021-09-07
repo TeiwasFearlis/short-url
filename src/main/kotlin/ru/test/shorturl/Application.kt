@@ -9,7 +9,9 @@ import org.springframework.context.support.GenericApplicationContext
 import org.springframework.context.support.beans
 import org.springframework.http.HttpStatus
 import org.springframework.web.reactive.function.BodyInserters
-import org.springframework.web.reactive.function.server.*
+import org.springframework.web.reactive.function.server.ServerRequest
+import org.springframework.web.reactive.function.server.ServerResponse
+import org.springframework.web.reactive.function.server.coRouter
 import org.springframework.web.server.ResponseStatusException
 import java.net.MalformedURLException
 import java.net.URI
@@ -28,6 +30,7 @@ fun main(args: Array<String>) {
     runApplication<BlogApplication>(*args)
 }
 
+
 fun getAllHeadersAsString(request: ServerRequest): String {
     val builder = StringBuilder()
     for ((key, value) in request.headers().asHttpHeaders()) {
@@ -38,14 +41,15 @@ fun getAllHeadersAsString(request: ServerRequest): String {
 
 val apiInitializer: ApplicationContextInitializer<GenericApplicationContext> = beans {
 
-    bean <Repo>{
-        UrlRepo(env.getRequiredProperty("db.schema"), ref())
+    bean<Repo> {
+        UrlRepo(env.getRequiredProperty("db.schema"), ref(),ref())
     }
 
     bean {
         router(env.getRequiredProperty("hostName"), ref())
     }
 }
+
 
 private fun router(hostName: String, urlRepo: Repo) = coRouter {
     GET("/save") { request ->
@@ -66,6 +70,4 @@ private fun router(hostName: String, urlRepo: Repo) = coRouter {
         ServerResponse.temporaryRedirect(URI.create(url))
                 .build().awaitSingle()
     }
-
-
-}
+   }

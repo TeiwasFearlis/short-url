@@ -20,6 +20,7 @@ repositories {
 
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
+	implementation("org.springframework.boot:spring-boot-starter-cache")
 	implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
 
 	implementation("io.projectreactor:reactor-test")
@@ -33,6 +34,9 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
+
+	implementation("com.github.ben-manes.caffeine:caffeine")
+
 
 	implementation("org.liquibase:liquibase-core")
 
