@@ -1,0 +1,25 @@
+apiVersion: skaffold/v2beta10
+kind: Config
+metadata:
+  name: short-url
+# required Docker - https://github.com/GoogleContainerTools/skaffold/issues/5197
+build:
+  local:
+    push: false
+  artifacts:
+    - image: docker.io/teiwas/short-url
+      jib: {}
+deploy:
+  kustomize:
+    paths:
+      - k8s/dev
+profiles:
+  # run only application dependencies
+  - name: depsOnly
+    patches:
+      - op: remove
+        path: /build
+    deploy:
+      kustomize:
+        paths:
+          - k8s/deps

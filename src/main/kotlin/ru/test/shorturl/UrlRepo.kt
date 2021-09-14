@@ -4,54 +4,38 @@ package ru.test.shorturl
 import io.r2dbc.spi.ConnectionFactory
 import io.r2dbc.spi.Row
 import kotlinx.coroutines.reactor.awaitSingleOrNull
-import org.springframework.cache.Cache
 import org.springframework.cache.CacheManager
 import org.springframework.dao.EmptyResultDataAccessException
 import org.springframework.r2dbc.core.DatabaseClient
 import org.springframework.r2dbc.core.await
+import org.springframework.r2dbc.core.awaitOneOrNull
 import org.springframework.r2dbc.core.awaitSingleOrNull
 
 
-open class UrlRepo(private val schema: String, connectionFactory: ConnectionFactory, private val cacheManager: CacheManager) : Repo {
+open class UrlRepo(private val schema: String, connectionFactory: ConnectionFactory, private var cacheManager: CacheManager) : Repo {
 
 
     private val client = DatabaseClient.create(connectionFactory)
 
-   // private val hashMap:HashMap<String,String?> = HashMap()
-
 
     override suspend fun addInDB(url: String): String? {
-
-//       val cacheManager  = HashMap<String, HashMap<String,Any>>()
-//       val integerCache = HashMap<String,Int>()
-//       val stringCache = HashMap<String,String>()
-//        cacheManager["string"] = stringCache as  HashMap<String,Any>
-//        cacheManager["int"] = integerCache as  HashMap<String,Any>
-
-        //////
-
-//        val string = cacheManager.get("string")
-//        string?.put("","")
-
-
-//        val existUrl: Long? =
-//                client.sql("SELECT id From public.url_table where url=:url")
-//                        .bind("url", url)
-//                        .map { row: Row ->
-//                            row.get(0) as Long?
-//                        }
-//                        .awaitOneOrNull()
-//        println("return 1")//todo удалить
-//        if (existUrl != null)
-//            return existUrl.toString(36)
-
-
-       // val cache: Cache = cacheManager.getCache("url")!!
-        if (cacheManager.cacheNames.add(url)) {
-           // return cache.get(url).toString()
-        } //lse {
-
-            println("return key")//todo удалить
+        val cache = cacheManager.getCache("url")!!
+        if (cache.get(url) != null) {
+            return cache.get(url, String::class.java)
+        } else if (cache.get(url) == null) {
+            val existUrl: Long? =
+                    client.sql("SELECT id From public.url_table where url=:url")
+                            .bind("url", url)
+                            .map { row: Row ->
+                                row.get(0) as Long?
+                            }
+                            .awaitOneOrNull()
+            if (existUrl != null) {
+                val result = existUrl.toString(36)
+                cache.put(url, result)
+                return result
+            }
+        } else {//todo нужен ли тут else?
             val key = client.sql("INSERT INTO $schema.url_table(url)" +
                     " VALUES(:url)")
                     .bind("url", url)
@@ -62,10 +46,10 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
                         row["id"] as Long
                     }
                     .awaitSingleOrNull()?.toString(36)
-            //hashMap.put(url, key)
-           // cache.put(url,key)
+            cache.put(url, key)
             return key
-        //}
+        }
+        return null
     }
 
 
@@ -78,21 +62,24 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
     }
 
 
-
     override suspend fun getUrl(id: String): String? {
-        // cacheManager.getCache()
-        println("return redirect")
         val returnKeyInId: Long = id.toLong(36)
-        return try {
-            client.sql("SELECT url From $schema.url_table Where id=:key")
-                    .bind("key", returnKeyInId)
-                    .map { row: Row ->
-                        row.get("url") as String
-                    }
-                    .awaitSingleOrNull()
-        } catch (e: EmptyResultDataAccessException) {
-            null
+        val cache = cacheManager.getCache("id")!!
+        if (cache.get(id) != null) {
+            return cache.get(id, String::class.java)
+        } else {
+            return try {
+                val returnUrl = client.sql("SELECT url From $schema.url_table Where id=:key")
+                        .bind("key", returnKeyInId)
+                        .map { row: Row ->
+                            row.get("url") as String
+                        }
+                        .awaitSingleOrNull()
+                cache.put(id, returnUrl)
+                return returnUrl
+            } catch (e: EmptyResultDataAccessException) {
+                null
+            }
         }
     }
-
 }

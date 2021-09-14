@@ -4,6 +4,7 @@ package ru.test.shorturl
 import kotlinx.coroutines.reactor.awaitSingle
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
+import org.springframework.cache.annotation.EnableCaching
 import org.springframework.context.ApplicationContextInitializer
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.context.support.beans
@@ -18,6 +19,7 @@ import java.net.URI
 import java.net.URL
 
 @SpringBootApplication
+@EnableCaching
 class BlogApplication
 
 object AppInitializer : ApplicationContextInitializer<GenericApplicationContext> {
@@ -42,7 +44,7 @@ fun getAllHeadersAsString(request: ServerRequest): String {
 val apiInitializer: ApplicationContextInitializer<GenericApplicationContext> = beans {
 
     bean<Repo> {
-        UrlRepo(env.getRequiredProperty("db.schema"), ref(),ref())
+        UrlRepo(env.getRequiredProperty("db.schema"), ref(), ref())
     }
 
     bean {
@@ -70,4 +72,4 @@ private fun router(hostName: String, urlRepo: Repo) = coRouter {
         ServerResponse.temporaryRedirect(URI.create(url))
                 .build().awaitSingle()
     }
-   }
+}

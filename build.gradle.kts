@@ -5,11 +5,12 @@ plugins {
 	id("io.spring.dependency-management") version "1.0.11.RELEASE"
 	id("java")
 	kotlin("jvm") version "1.5.10"
+	id("com.google.cloud.tools.jib") version "3.1.4"
 	kotlin("plugin.spring") version "1.5.10"
 }
 
 group = "ru.test"
-version = "0.0.1-SNAPSHOT"
+version = "0.0.2-SNAPSHOT"
 java.sourceCompatibility = JavaVersion.VERSION_11
 
 repositories {
@@ -19,6 +20,7 @@ repositories {
 
 
 dependencies {
+	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
 	implementation("org.springframework.boot:spring-boot-starter-cache")
 	implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
@@ -73,3 +75,26 @@ tasks.withType<KotlinCompile> {
 tasks.withType<Test> {
 	useJUnitPlatform()
 }
+
+jib {
+	from {
+		image = "azul/zulu-openjdk:11"
+	}
+	to {
+		setImage(provider { "docker.io/teiwas/$name:$version" })
+//		         auth {
+//             username = project.properties["docker.username"] as String
+//             password = project.properties["docker.password"] as String
+//         }
+	}
+	container {
+		environment = mapOf(
+				"JAVA_TOOL_OPTIONS" to listOf(
+						"-XX:MaxRAMPercentage=60",
+						"-XX:+UseStringDeduplication",
+				).joinToString(" ")
+		)
+		user = "nobody"
+	}
+}
+

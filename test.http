@@ -1,19 +1,19 @@
-GET http://localhost:8080/save?url=https://www.profildoors.ru/catalog/seriya_smk/
+GET http://localhost:8181/save?url=https://www.profildoors.ru/catalog/seriya_smk/
 ###
 
 ###
-GET localhost:8080/go/7rb
+GET localhost:8080/go/7sb
 
 ###
 GET http://localhost:8080/save?url=https://google.com
 
 ###
-GET localhost:8080/go/7r2
+GET localhost:8080/go/7sc
 ###
 GET http://localhost:8080/save?url=https://profildoors-doors.ru/serija-smk/
 ###
-GET localhost:8080/go/7qz
+GET localhost:8080/go/7sd
 ###
 GET http://localhost:8080/save?url=https://chrome.google.com/webstore/detail/talend-api-tester-free-ed/aejoelaoggembcahagimdiliamlcdmfm
 ###
-GET localhost:8080/go/7pu
+GET localhost:8080/go/7sn

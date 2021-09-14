@@ -1,0 +1,30 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: short-url
+spec:
+  template:
+    spec:
+      containers:
+        - name: short-url
+          env:
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-dev-db-secret
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgresql-dev-db-secret
+                  key: password
+            - name: DB_DATABASE
+              value: devdb
+              valueFrom: null
+            - name: DB_SCHEMA
+              value: public
+              valueFrom: null
+            - name: SPRING_R2DBC_PROPERTIES_SSLMODE
+              value: ALLOW
+

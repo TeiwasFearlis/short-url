@@ -1,8 +1,7 @@
-#FROM openjdk:11-jdk
-#ADD . /src
-#WORKDIR /src
-#RUN . /src
-#//TODO make  jar file \
-#   // copy jar file
-#EXPOSE 8080
-#ENTRYPOINT ["kotlin","-jar","target/microservices-gateway-1.0.0.jar"]
+FROM openjdk:11-jdk
+COPY . /data_image
+WORKDIR /data_image
+RUN ./gradlew assemble
+COPY build/libs/short-url-*-SNAPSHOT.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java","-jar","app.jar"]

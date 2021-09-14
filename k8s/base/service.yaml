@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: short-url
+  labels:
+    app.kubernetes.io/name: short-url
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: short-url
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
