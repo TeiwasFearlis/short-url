@@ -1,8 +1,8 @@
-GET http://localhost:8181/save?url=https://www.profildoors.ru/catalog/seriya_smk/
+GET http://localhost:8080/save?url=https://www.profildoors.ru/catalog/seriya_smk/
 ###
 
 ###
-GET localhost:8080/go/7sb
+GET localhost:8080/go/7ps
 
 ###
 GET http://localhost:8080/save?url=https://google.com

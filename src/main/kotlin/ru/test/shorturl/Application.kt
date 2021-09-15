@@ -1,6 +1,7 @@
 package ru.test.shorturl
 
 
+import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingle
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
@@ -13,6 +14,7 @@ import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.coRouter
+import org.springframework.web.reactive.function.server.json
 import org.springframework.web.server.ResponseStatusException
 import java.net.MalformedURLException
 import java.net.URI
@@ -48,7 +50,7 @@ val apiInitializer: ApplicationContextInitializer<GenericApplicationContext> = b
     }
 
     bean {
-        router(env.getRequiredProperty("hostName"), ref())
+        router(env.getRequiredProperty("host_Name"), ref())
     }
 }
 
@@ -72,4 +74,12 @@ private fun router(hostName: String, urlRepo: Repo) = coRouter {
         ServerResponse.temporaryRedirect(URI.create(url))
                 .build().awaitSingle()
     }
+    POST("/save/{package}"){ req: ServerRequest ->
+        val pathVariable = req.pathVariable("package")
+        println(pathVariable)
+        ServerResponse.ok().bodyValue(pathVariable).awaitSingle()
+
+    }
+
 }
+

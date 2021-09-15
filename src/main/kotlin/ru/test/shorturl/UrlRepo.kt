@@ -35,7 +35,7 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
                 cache.put(url, result)
                 return result
             }
-        } else {//todo нужен ли тут else?
+        }
             val key = client.sql("INSERT INTO $schema.url_table(url)" +
                     " VALUES(:url)")
                     .bind("url", url)
@@ -48,8 +48,6 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
                     .awaitSingleOrNull()?.toString(36)
             cache.put(url, key)
             return key
-        }
-        return null
     }
 
 
