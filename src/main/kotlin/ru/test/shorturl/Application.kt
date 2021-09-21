@@ -1,7 +1,6 @@
 package ru.test.shorturl
 
 
-import kotlinx.coroutines.reactive.awaitSingle
 import kotlinx.coroutines.reactor.awaitSingle
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
@@ -14,11 +13,11 @@ import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
 import org.springframework.web.reactive.function.server.coRouter
-import org.springframework.web.reactive.function.server.json
 import org.springframework.web.server.ResponseStatusException
 import java.net.MalformedURLException
 import java.net.URI
 import java.net.URL
+
 
 @SpringBootApplication
 @EnableCaching
@@ -43,6 +42,7 @@ fun getAllHeadersAsString(request: ServerRequest): String {
     return builder.toString()
 }
 
+
 val apiInitializer: ApplicationContextInitializer<GenericApplicationContext> = beans {
 
     bean<Repo> {
@@ -55,6 +55,7 @@ val apiInitializer: ApplicationContextInitializer<GenericApplicationContext> = b
 }
 
 
+
 private fun router(hostName: String, urlRepo: Repo) = coRouter {
     GET("/save") { request ->
         val url = request.queryParam("url").get()
@@ -64,7 +65,7 @@ private fun router(hostName: String, urlRepo: Repo) = coRouter {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST)
         }
         ServerResponse.ok()
-                .body(BodyInserters.fromValue(hostName + urlRepo.addInDB(request.queryParam("url").get())))
+                .body(BodyInserters.fromValue(hostName + urlRepo.getKey(request.queryParam("url").get())))
                 .awaitSingle()
     }
     GET("/go/{key}") { req: ServerRequest ->
@@ -74,12 +75,17 @@ private fun router(hostName: String, urlRepo: Repo) = coRouter {
         ServerResponse.temporaryRedirect(URI.create(url))
                 .build().awaitSingle()
     }
-    POST("/save/{package}"){ req: ServerRequest ->
-        val pathVariable = req.pathVariable("package")
-        println(pathVariable)
-        ServerResponse.ok().bodyValue(pathVariable).awaitSingle()
-
+    POST("/post"){ request: ServerRequest ->
+        val postBody = request.bodyToMono(String::class.java).awaitSingle()
+        val packageKey = urlRepo.getPackageKey(postBody)
+        val stringBuilder = StringBuilder()
+        packageKey.forEach { key ->
+            stringBuilder.append(hostName).append(key).append("\n")
+        }
+        ServerResponse.ok()
+                .body(BodyInserters.fromValue(stringBuilder))
+                .awaitSingle()
     }
-
 }
+
 

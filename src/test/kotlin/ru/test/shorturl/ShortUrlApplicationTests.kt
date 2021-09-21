@@ -5,6 +5,7 @@ import io.r2dbc.spi.ConnectionFactory
 import io.r2dbc.spi.ConnectionFactoryMetadata
 import io.r2dbc.spi.ConnectionFactoryOptions
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.postgresql.ds.common.BaseDataSource
 import org.reactivestreams.Publisher
@@ -21,6 +22,7 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.web.util.UriBuilder
 import javax.sql.DataSource
 
+
 @SpringBootTest(classes = [BlogApplication::class], webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(EmbeddedPostgresConfiguration::class)
 @AutoConfigureEmbeddedDatabase(
@@ -36,8 +38,9 @@ class ShortUrlApplicationTests(/*@Autowired urlRepo: UrlRepo*/) {
     @Autowired
     lateinit var template: JdbcTemplate
 
+
     @Test
-    fun saveAndRedirectUrlGoodTest() {
+     fun `save and redirect Url`() {
         val url = "https://www.google.com"
         var key = ""
         webClient.get()
@@ -59,12 +62,10 @@ class ShortUrlApplicationTests(/*@Autowired urlRepo: UrlRepo*/) {
                     //TODO check log row exist
                 }
             }
-
-        //Assertions.assertNotNull(urlRepo.getUrl(key))
-
         webClient.get().uri("/go/{key}", key)
-            .exchange()
-            .expectStatus().isTemporaryRedirect
+                .exchange()
+                .expectStatus().isTemporaryRedirect
+        Assertions.assertNotNull(template.queryForObject("SELECT url From public.url_table Where id=?", String::class.java,key.toLong(36)))
     }
 
     //
@@ -116,7 +117,7 @@ class ShortUrlApplicationTests(/*@Autowired urlRepo: UrlRepo*/) {
                     .path("/save/")
                     .queryParam("url", url)
                     .build()
-            }
+            }.exchange()
 
 
         webClient.get()

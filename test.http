@@ -1,8 +1,25 @@
+POST http://localhost:8080/post
+Content-Type: application/x-www-form-urlencoded
+
+http//chrome.google.com/webstore/detail/talend-api-tester-free-ed/aejoelaoggem
+ht
+
+###
+
+POST http://localhost:8080/post
+Content-Type: application/json
+
+{"key":"https://chrome.google.com/webstore/detail/talend-api-tester-free-ed/aejoelaoggem",
+  "key2": "https://www.profildoors.ru/catalog/seriya_smk"
+}
+
+###
+
 GET http://localhost:8080/save?url=https://www.profildoors.ru/catalog/seriya_smk/
 ###
 
 ###
-GET localhost:8080/go/7ps
+GET localhost/go/7qo
 
 ###
 GET http://localhost:8080/save?url=https://google.com
@@ -17,3 +34,4 @@ GET localhost:8080/go/7sd
 GET http://localhost:8080/save?url=https://chrome.google.com/webstore/detail/talend-api-tester-free-ed/aejoelaoggembcahagimdiliamlcdmfm
 ###
 GET localhost:8080/go/7sn
+###

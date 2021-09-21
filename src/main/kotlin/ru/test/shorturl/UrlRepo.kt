@@ -10,6 +10,8 @@ import org.springframework.r2dbc.core.DatabaseClient
 import org.springframework.r2dbc.core.await
 import org.springframework.r2dbc.core.awaitOneOrNull
 import org.springframework.r2dbc.core.awaitSingleOrNull
+import java.io.BufferedReader
+import java.net.URL
 
 
 open class UrlRepo(private val schema: String, connectionFactory: ConnectionFactory, private var cacheManager: CacheManager) : Repo {
@@ -18,13 +20,13 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
     private val client = DatabaseClient.create(connectionFactory)
 
 
-    override suspend fun addInDB(url: String): String? {
+    override suspend fun getKey(url: String): String? {
         val cache = cacheManager.getCache("url")!!
         if (cache.get(url) != null) {
             return cache.get(url, String::class.java)
         } else if (cache.get(url) == null) {
             val existUrl: Long? =
-                    client.sql("SELECT id From public.url_table where url=:url")
+                    client.sql("SELECT id From $schema.url_table where url=:url")
                             .bind("url", url)
                             .map { row: Row ->
                                 row.get(0) as Long?
@@ -36,18 +38,18 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
                 return result
             }
         }
-            val key = client.sql("INSERT INTO $schema.url_table(url)" +
-                    " VALUES(:url)")
-                    .bind("url", url)
-                    .filter { statement, _ -> statement.returnGeneratedValues("id").execute() }
-                    .fetch()
-                    .first()
-                    .map { row ->
-                        row["id"] as Long
-                    }
-                    .awaitSingleOrNull()?.toString(36)
-            cache.put(url, key)
-            return key
+        val key = client.sql("INSERT INTO $schema.url_table(url)" +
+                " VALUES(:url)")
+                .bind("url", url)
+                .filter { statement, _ -> statement.returnGeneratedValues("id").execute() }
+                .fetch()
+                .first()
+                .map { row ->
+                    row["id"] as Long
+                }
+                .awaitSingleOrNull()?.toString(36)
+        cache.put(url, key)
+        return key
     }
 
 
@@ -79,5 +81,17 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
                 null
             }
         }
+    }
+
+    override suspend fun getPackageKey(severalUrl: String): ArrayList<String?> {
+        val array = arrayListOf<String?>()
+        val packageUrl = severalUrl.trim().split("\n")
+        packageUrl.forEach { x ->
+            if (x.startsWith("http://") || x.startsWith("https://")) {
+                val key = getKey(x)
+                array.add(key)
+            }
+        }
+        return array
     }
 }
