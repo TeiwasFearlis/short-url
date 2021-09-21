@@ -43,6 +43,7 @@ dependencies {
 	implementation("org.liquibase:liquibase-core")
 
 	testImplementation("org.springframework.boot:spring-boot-test")
+	testImplementation("org.assertj:assertj-db:1.3.0")
 	testImplementation("org.junit.jupiter:junit-jupiter:5.7.2")
 	testImplementation("io.zonky.test:embedded-database-spring-test:2.1.0")
 	testImplementation("io.zonky.test.postgres:embedded-postgres-binaries-bom:12.1.0-1")

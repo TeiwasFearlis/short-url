@@ -5,7 +5,7 @@ import io.r2dbc.spi.ConnectionFactory
 import io.r2dbc.spi.ConnectionFactoryMetadata
 import io.r2dbc.spi.ConnectionFactoryOptions
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase
-import org.junit.jupiter.api.Assertions
+import org.assertj.db.type.Changes
 import org.junit.jupiter.api.Test
 import org.postgresql.ds.common.BaseDataSource
 import org.reactivestreams.Publisher
@@ -16,12 +16,13 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
-import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.web.util.UriBuilder
 import javax.sql.DataSource
-
+import org.assertj.db.api.Assertions.assertThat
+import org.assertj.db.api.ChangesAssert
+import org.assertj.db.type.Request
 
 @SpringBootTest(classes = [BlogApplication::class], webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(EmbeddedPostgresConfiguration::class)
@@ -36,36 +37,48 @@ class ShortUrlApplicationTests(/*@Autowired urlRepo: UrlRepo*/) {
     lateinit var webClient: WebTestClient
 
     @Autowired
-    lateinit var template: JdbcTemplate
+    lateinit var ds: DataSource
 
+    //https://github.com/assertj/assertj-examples/blob/main/assertions-examples
 
     @Test
-     fun `save and redirect Url`() {
-        val url = "https://www.google.com"
+    fun `save and redirect Url`() {
         var key = ""
-        webClient.get()
-            .uri { uriBuilder: UriBuilder ->
-                uriBuilder
-                    .path("/save")
-                    .queryParam("url", url)
-                    .build()
-            }
-            .exchange()
-            .expectStatus().isOk
-            .expectBody().consumeWith {
-                if (it.responseBody == null) {
-                    throw IllegalStateException("Empty body")
-                } else {
-                    val body = String(it.responseBody as ByteArray)
-                    //localhost:8080/go/h42h4h2
-                    key = body.substring(body.indexOf("go/") + 3)
-                    //TODO check log row exist
+        val url = "https://www.google.com"
+        assertChanges(ds) {
+            webClient.get()
+                .uri { uriBuilder: UriBuilder ->
+                    uriBuilder
+                        .path("/save")
+                        .queryParam("url", url)
+                        .build()
                 }
-            }
-        webClient.get().uri("/go/{key}", key)
+                .exchange()
+                .expectStatus().isOk
+                .expectBody().consumeWith {
+                    if (it.responseBody == null) {
+                        throw IllegalStateException("Empty body")
+                    } else {
+                        val body = String(it.responseBody as ByteArray)
+                        //localhost:8080/go/h42h4h2
+                        key = body.substring(body.indexOf("go/") + 3)
+                        //TODO check log row exist
+                    }
+                }
+        }.hasNumberOfChanges(1)
+            .ofCreation().hasNumberOfChanges(1)
+            .onTable("url_table").hasNumberOfChanges(1)
+
+        val request = Request(ds, "SELECT url From public.url_table Where id=?", key.toLong(36))
+        assertThat(request).row().hasNumberOfColumns(1).hasOnlyNotNullValues().hasValues(url)
+
+        assertChanges(ds) {
+            webClient.get().uri("/go/{key}", key)
                 .exchange()
                 .expectStatus().isTemporaryRedirect
-        Assertions.assertNotNull(template.queryForObject("SELECT url From public.url_table Where id=?", String::class.java,key.toLong(36)))
+        }.hasNumberOfChanges(1)
+            .ofCreation().hasNumberOfChanges(1)
+            .onTable("save_redirect").hasNumberOfChanges(1)
     }
 
     //
@@ -131,6 +144,15 @@ class ShortUrlApplicationTests(/*@Autowired urlRepo: UrlRepo*/) {
     }
 }
 
+fun assertChanges(ds: DataSource, call: () -> Unit): ChangesAssert {
+    return Changes(ds).let {
+        it.setStartPointNow()
+        call.invoke()
+        it.setEndPointNow()
+        assertThat(it)
+    }
+}
+
 @Configuration
 class EmbeddedPostgresConfiguration {
     @Bean
@@ -145,6 +167,7 @@ class EmbeddedPostgresConfiguration {
     ) : ConnectionFactory {
         @Volatile
         private var latestPgDs: BaseDataSource? = null
+
         @Volatile
         private var factory: ConnectionFactory? = null
 
