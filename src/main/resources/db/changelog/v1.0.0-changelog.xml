@@ -19,6 +19,8 @@ http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibas
             <column name="url" type="varchar">
                 <constraints nullable="false" unique="true"/>
             </column>
+            <column name="external_url" type="varchar">
+            </column>
         </createTable>
     </changeSet>
 

@@ -54,8 +54,6 @@ val apiInitializer: ApplicationContextInitializer<GenericApplicationContext> = b
     }
 }
 
-
-
 private fun router(hostName: String, urlRepo: Repo) = coRouter {
     GET("/save") { request ->
         val url = request.queryParam("url").get()
@@ -69,17 +67,38 @@ private fun router(hostName: String, urlRepo: Repo) = coRouter {
                 .awaitSingle()
     }
     GET("/go/{key}") { req: ServerRequest ->
-        val url = urlRepo.getUrl(req.pathVariable("key")) ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+        val composeUrl = urlRepo.getUrl(req.pathVariable("key"))
         val allHeadersAsString = getAllHeadersAsString(req)
-        urlRepo.saveRedirect(url, allHeadersAsString)
-        ServerResponse.temporaryRedirect(URI.create(url))
+            urlRepo.saveRedirect(composeUrl.targetUrl?:composeUrl.redirectUrl, allHeadersAsString)//todo запись идет раньше редиректа
+        ServerResponse.temporaryRedirect(URI.create(composeUrl.redirectUrl))
                 .build().awaitSingle()
     }
-    POST("/post"){ request: ServerRequest ->
+    POST("/import"){ request: ServerRequest ->
         val postBody = request.bodyToMono(String::class.java).awaitSingle()
-        val packageKey = urlRepo.getPackageKey(postBody)
+        val array = arrayListOf<String>()
+        postBody.trim().split("\n").forEach { url ->
+            url.trim().also {
+                if (it.startsWith("http://") || it.startsWith("https://")) {
+                    array.add(urlRepo.getKey(it))
+                }
+            }
+
+        }
         val stringBuilder = StringBuilder()
-        packageKey.forEach { key ->
+        array.forEach { key ->
+            stringBuilder.append(hostName).append(key).append("\n")
+        }
+        ServerResponse.ok()
+                .body(BodyInserters.fromValue(stringBuilder))
+                .awaitSingle()
+    }
+    POST("/import/ready"){ request: ServerRequest ->
+        val postBody = request.bodyToMono(String::class.java).awaitSingle()
+        val packageKey = getPackageUrlForOtherDomen(postBody)
+        val stringBuilder = StringBuilder()
+        var key:String
+        packageKey.forEach { x ->
+             key = urlRepo.getKey(x.key, x.value)
             stringBuilder.append(hostName).append(key).append("\n")
         }
         ServerResponse.ok()
@@ -87,5 +106,21 @@ private fun router(hostName: String, urlRepo: Repo) = coRouter {
                 .awaitSingle()
     }
 }
+
+fun getPackageUrlForOtherDomen(severalUrl: String): HashMap<String, String> {
+    val map = HashMap<String, String>()
+    severalUrl.split("\n").forEach { urlPackage ->
+        urlPackage.trim().also {
+            if (it.startsWith("http://") || it.startsWith("https://")) {
+            val split = it.split(";")
+            map[split[0].trim()] = split[1].trim()
+        }
+        }
+    }
+    return map
+}
+
+
+data class ComposeUrl(val redirectUrl:String, val targetUrl:String?)
 
 

@@ -3,15 +3,12 @@ package ru.test.shorturl
 
 import io.r2dbc.spi.ConnectionFactory
 import io.r2dbc.spi.Row
-import kotlinx.coroutines.reactor.awaitSingleOrNull
+import kotlinx.coroutines.reactor.awaitSingle
 import org.springframework.cache.CacheManager
-import org.springframework.dao.EmptyResultDataAccessException
-import org.springframework.r2dbc.core.DatabaseClient
-import org.springframework.r2dbc.core.await
-import org.springframework.r2dbc.core.awaitOneOrNull
-import org.springframework.r2dbc.core.awaitSingleOrNull
-import java.io.BufferedReader
-import java.net.URL
+import org.springframework.http.HttpStatus
+import org.springframework.r2dbc.core.*
+import org.springframework.web.server.ResponseStatusException
+import java.lang.IllegalStateException
 
 
 open class UrlRepo(private val schema: String, connectionFactory: ConnectionFactory, private var cacheManager: CacheManager) : Repo {
@@ -20,36 +17,51 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
     private val client = DatabaseClient.create(connectionFactory)
 
 
-    override suspend fun getKey(url: String): String? {
-        val cache = cacheManager.getCache("url")!!
-        if (cache.get(url) != null) {
-            return cache.get(url, String::class.java)
-        } else if (cache.get(url) == null) {
-            val existUrl: Long? =
-                    client.sql("SELECT id From $schema.url_table where url=:url")
-                            .bind("url", url)
-                            .map { row: Row ->
-                                row.get(0) as Long?
-                            }
-                            .awaitOneOrNull()
-            if (existUrl != null) {
-                val result = existUrl.toString(36)
-                cache.put(url, result)
+    override suspend fun getKey(url: String, fullUrl: String?): String {
+        val cache = cacheManager.getCache("url")
+        if (cache == null) {
+            throw IllegalStateException("Mandatory cache 'url' not found!")
+        } else {
+            val result = cache.get(url, String::class.java)
+            if (result != null) {
                 return result
+            } else {
+                val existUrl: Long? =
+                        client.sql("SELECT id From $schema.url_table where url=:url")
+                                .bind("url", url)
+                                .map { row: Row ->
+                                    row.get(0) as Long?
+                                }
+                                .awaitOneOrNull()
+                if (existUrl != null) {
+                    val result = existUrl.toString(36)
+                    cache.put(url, result)
+                    return result
+                } else {
+                    val key = client.sql("INSERT INTO $schema.url_table(url,external_url)" +
+                            " VALUES(:url,:fullUrl)")
+                            .bind("url", url)
+                            .bindConditional("fullUrl", fullUrl)
+                            .filter { statement, _ -> statement.returnGeneratedValues("id").execute() }
+                            .fetch()
+                            .first()
+                            .map { row ->
+                                row["id"] as Long
+                            }
+                            .awaitSingle().toString(36)
+                    cache.put(url, key)
+                    return key
+                }
             }
         }
-        val key = client.sql("INSERT INTO $schema.url_table(url)" +
-                " VALUES(:url)")
-                .bind("url", url)
-                .filter { statement, _ -> statement.returnGeneratedValues("id").execute() }
-                .fetch()
-                .first()
-                .map { row ->
-                    row["id"] as Long
-                }
-                .awaitSingleOrNull()?.toString(36)
-        cache.put(url, key)
-        return key
+    }
+
+    fun DatabaseClient.GenericExecuteSpec.bindConditional(key: String, value: Any?): DatabaseClient.GenericExecuteSpec {
+        return if (value == null) {
+            this.bindNull(key, String::class.java)
+        } else {
+            this.bind(key, value)
+        }
     }
 
 
@@ -62,36 +74,22 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
     }
 
 
-    override suspend fun getUrl(id: String): String? {
+    override suspend fun getUrl(id: String): ComposeUrl {
         val returnKeyInId: Long = id.toLong(36)
-        val cache = cacheManager.getCache("id")!!
-        if (cache.get(id) != null) {
-            return cache.get(id, String::class.java)
+        val cache = cacheManager.getCache("id")
+        return if (cache == null) {
+            throw IllegalStateException("Mandatory cache 'id' not found!")
         } else {
-            return try {
-                val returnUrl = client.sql("SELECT url From $schema.url_table Where id=:key")
-                        .bind("key", returnKeyInId)
-                        .map { row: Row ->
-                            row.get("url") as String
-                        }
-                        .awaitSingleOrNull()
-                cache.put(id, returnUrl)
-                return returnUrl
-            } catch (e: EmptyResultDataAccessException) {
-                null
-            }
+            return cache.get(id, ComposeUrl::class.java)
+                    ?: (client.sql("SELECT url,external_url From $schema.url_table Where id=:key")
+                            .bind("key", returnKeyInId)
+                            .map { row: Row ->
+                                ComposeUrl(
+                                        row.get("url") as String,
+                                        row.get("external_url") as String?
+                                )
+                            }
+                            .awaitSingleOrNull() ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST))
         }
-    }
-
-    override suspend fun getPackageKey(severalUrl: String): ArrayList<String?> {
-        val array = arrayListOf<String?>()
-        val packageUrl = severalUrl.trim().split("\n")
-        packageUrl.forEach { x ->
-            if (x.startsWith("http://") || x.startsWith("https://")) {
-                val key = getKey(x)
-                array.add(key)
-            }
-        }
-        return array
     }
 }
