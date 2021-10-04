@@ -26,17 +26,17 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
             if (result != null) {
                 return result
             } else {
-                val existUrl: Long? =
+                val existKey: Long? =
                         client.sql("SELECT id From $schema.url_table where url=:url")
                                 .bind("url", url)
                                 .map { row: Row ->
                                     row.get(0) as Long?
                                 }
                                 .awaitOneOrNull()
-                if (existUrl != null) {
-                    val result = existUrl.toString(36)
-                    cache.put(url, result)
-                    return result
+                if (existKey != null) {
+                    val encodedKey = existKey.toString(36)
+                    cache.put(url, encodedKey)
+                    return encodedKey
                 } else {
                     val key = client.sql("INSERT INTO $schema.url_table(url,external_url)" +
                             " VALUES(:url,:fullUrl)")
@@ -56,7 +56,7 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
         }
     }
 
-    fun DatabaseClient.GenericExecuteSpec.bindConditional(key: String, value: Any?): DatabaseClient.GenericExecuteSpec {
+    private fun DatabaseClient.GenericExecuteSpec.bindConditional(key: String, value: Any?): DatabaseClient.GenericExecuteSpec {
         return if (value == null) {
             this.bindNull(key, String::class.java)
         } else {
@@ -80,16 +80,26 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
         return if (cache == null) {
             throw IllegalStateException("Mandatory cache 'id' not found!")
         } else {
-            return cache.get(id, ComposeUrl::class.java)
-                    ?: (client.sql("SELECT url,external_url From $schema.url_table Where id=:key")
-                            .bind("key", returnKeyInId)
-                            .map { row: Row ->
-                                ComposeUrl(
-                                        row.get("url") as String,
-                                        row.get("external_url") as String?
-                                )
-                            }
-                            .awaitSingleOrNull() ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST))
+            val result = cache.get(id, ComposeUrl::class.java)
+            if (result != null) {
+                return result
+            } else {
+                val url = client.sql("SELECT url,external_url From $schema.url_table Where id=:key")
+                        .bind("key", returnKeyInId)
+                        .map { row: Row ->
+                            ComposeUrl(
+                                    row.get("url") as String,
+                                    row.get("external_url") as String?
+                            )
+                        }
+                        .awaitSingleOrNull()
+                if (url != null) {
+                    cache.put(id, url)
+                    url
+                } else {
+                    throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+                }
+            }
         }
     }
 }

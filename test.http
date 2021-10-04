@@ -1,18 +1,18 @@
 POST http://localhost:8080/import
-Content-Type: plain/text
+Content-Type: application/json
 
 
- https://infokam.su/kamyshin-ozhidayut-tumany-i-dozhdi.ht
- http://admkamyshin.info/ugohs
+ [ " https://infokam.su/kamyshin-ozhidayut-tumany-i-dozhdi.ht",
+ "http://admkamyshin.info/ugohs"]
 
 
 ###
 
 POST http://localhost:8080/import/ready
-Content-Type: application/x-www-form-urlencoded
+Content-Type: application/json
 
- https://goo.su/7tKW ; https://infokam.su/kamyshin-ozhidayut-tumany-i-dozhdi.ht
- https://goo.su/7Tko ; http://admkamyshin.info/ugohs
+ [{"ready":"https://goo.su/7tKW","target":" https://infokam.su/kamyshin-ozhidayut-tumany-i-dozhdi.ht"},
+   {"ready":" https://goo.su/7Tko","target": " http://admkamyshin.info/ugohs"}]
 
 ###
 
@@ -20,7 +20,7 @@ GET http://localhost:8080/save?url=https://www.profildoors.ru/catalog/seriya_smk
 ###
 
 ###
-GET localhost:8080/go/7qeh
+GET localhost:8080/go/7ra
 
 ###
 GET http://localhost:8080/save?url=https://google.com
