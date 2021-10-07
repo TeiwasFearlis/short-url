@@ -28,6 +28,7 @@ import org.springframework.web.util.UriBuilder
 import reactor.core.publisher.Mono
 import javax.sql.DataSource
 
+
 @SpringBootTest(classes = [BlogApplication::class], webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import(EmbeddedPostgresConfiguration::class)
 @AutoConfigureEmbeddedDatabase(
@@ -127,6 +128,7 @@ class ShortUrlApplicationTests() {
     @Test
     fun `Good test post method package url`() {
         val url = "[ \" https://www.google.com\" , \"https://yandex.ru \" ,\" https://www.yahoo.com \" ]"
+        var decodeFromString = Json.decodeFromString<ArrayList<String>>(url)
         var key = ""
         assertChanges(ds) {
             webClient.post()
@@ -135,7 +137,7 @@ class ShortUrlApplicationTests() {
                                 .path("/import")
                                 .build()
                     }
-                    .body(Mono.just(url), String::class.java)
+                    .body(Mono.just(decodeFromString), ArrayList::class.java)
                     .exchange()
                     .expectStatus()
                     .isOk
@@ -144,7 +146,7 @@ class ShortUrlApplicationTests() {
                             throw IllegalStateException("Empty body")
                         } else {
                             val body = String(it.responseBody as ByteArray)
-                            val decodeFromString = Json.decodeFromString<ArrayList<String>>(body)
+                            decodeFromString = Json.decodeFromString<ArrayList<String>>(body)
                             val get = decodeFromString.get(0)
                             key = get.substring(get.indexOf("go/") + 3)
                         }
@@ -157,6 +159,7 @@ class ShortUrlApplicationTests() {
     @Test
     fun `http syntax test`() {
         val url = "[ \"hts://www.google.com\",\" https://yandex.ru \", \"https//www.yahoo.com\" ]"
+        val decodeFromString = Json.decodeFromString<ArrayList<String>>(url)
         assertChanges(ds) {
             webClient.post()
                     .uri { uriBuilder: UriBuilder ->
@@ -164,7 +167,7 @@ class ShortUrlApplicationTests() {
                                 .path("/import")
                                 .build()
                     }
-                    .body(Mono.just(url), String::class.java)
+                    .body(Mono.just(decodeFromString),ArrayList::class.java)
                     .exchange()
                     .expectStatus()
                     .isBadRequest
@@ -175,6 +178,7 @@ class ShortUrlApplicationTests() {
     fun `Good test post method package short url and full url, and test cache`() {
         val url = "[{\"ready\":\" https://goo.su/7xbP \",\"target\":\" https://www.google.com\"},{\"ready\":\" https://goo.su/7XbP\",\"target\":\" https://yandex.ru\"}, " +
                 "{\"ready\":\"https://goo.su/7xBq\",\"target\": \" https://www.yahoo.com\"}] "
+        val decodeFromString = Json.decodeFromString<ArrayList<ImportRequest>>(url)
         var key = ""
         assertChanges(ds) {
             webClient.post()
@@ -183,7 +187,7 @@ class ShortUrlApplicationTests() {
                                 .path("/import/ready")
                                 .build()
                     }
-                    .body(Mono.just(url), String::class.java)
+                    .body(Mono.just(decodeFromString), ArrayList::class.java)
                     .exchange()
                     .expectStatus()
                     .isOk
@@ -192,12 +196,13 @@ class ShortUrlApplicationTests() {
                             throw IllegalStateException("Empty body")
                         } else {
                             val body = String(it.responseBody as ByteArray)
-                            val decodeFromString = Json.decodeFromString<ArrayList<String>>(body)
-                            val get = decodeFromString.get(0)
+                           val decodeBody = Json.decodeFromString<ArrayList<String>>(body)
+                            val get = decodeBody.get(0)
                             key = get.substring(get.indexOf("go/") + 3)
                         }
                     }
         }.hasNumberOfChanges(3).ofCreation().hasNumberOfChanges(3).onTable("url_table").hasNumberOfChanges(3)
+
         assertChanges(ds) {
             webClient.post()
                     .uri { uriBuilder: UriBuilder ->
@@ -205,7 +210,7 @@ class ShortUrlApplicationTests() {
                                 .path("/import/ready")
                                 .build()
                     }
-                    .body(Mono.just(url), String::class.java)
+                    .body(Mono.just(decodeFromString), ArrayList::class.java)
                     .exchange()
                     .expectStatus()
                     .isOk

@@ -11,6 +11,7 @@ import org.springframework.context.ApplicationContextInitializer
 import org.springframework.context.support.GenericApplicationContext
 import org.springframework.context.support.beans
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
@@ -56,60 +57,61 @@ val apiInitializer: ApplicationContextInitializer<GenericApplicationContext> = b
 
 
 private fun router(hostName: String, urlRepo: Repo) = coRouter {
-    GET("/save") { request ->
-        val url = request.queryParam("url").get()
-        if (url.validate()) {
-            ServerResponse.ok()
-                    .body(BodyInserters.fromValue(hostName + urlRepo.getKey(request.queryParam("url").get())))
-                    .awaitSingle()
-        } else {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST)
-        }
-    }
-    GET("/go/{key}") { req: ServerRequest ->
-        val composeUrl = urlRepo.getUrl(req.pathVariable("key"))
-        val allHeadersAsString = getAllHeadersAsString(req)
-        urlRepo.saveRedirect(composeUrl.targetUrl ?: composeUrl.redirectUrl, allHeadersAsString)
-        ServerResponse.temporaryRedirect(URI.create(composeUrl.redirectUrl))
-                .build().awaitSingle()
-    }
-    POST("/import") { request: ServerRequest ->
-        val postBody = request.bodyToMono(String::class.java).awaitSingle()
-        val decodeFromString = Json.decodeFromString<List<String>>(postBody)
-        val array = ArrayList<String>()
-        decodeFromString.forEach { x ->
-            val url = x.trim()
+
+        GET("/save") { request ->
+            val url = request.queryParam("url").get()
             if (url.validate()) {
-                array.add(hostName + urlRepo.getKey(url))
+                ServerResponse.ok()
+                        .body(BodyInserters.fromValue(hostName + urlRepo.getKey(request.queryParam("url").get())))
+                        .awaitSingle()
             } else {
                 throw ResponseStatusException(HttpStatus.BAD_REQUEST)
             }
         }
-        ServerResponse.ok()
-                .body(BodyInserters.fromValue(array))
-                .awaitSingle()
-    }
-    POST("/import/ready") { request: ServerRequest ->
-        val postBody = request.bodyToMono(String::class.java).awaitSingle()
-        val decodeFromString = Json.decodeFromString<List<ImportRequest>>(postBody)
-        var shortKey: String
-        val array = ArrayList<String>()
-        decodeFromString.forEach { entry ->
-            val key = entry.ready.trim()
-            val value = entry.target.trim()
-            if (key.validate() && value.validate()) {
-                shortKey = urlRepo.getKey(key, value)
-                array.add(hostName + shortKey)
-            } else {
-                throw ResponseStatusException(HttpStatus.BAD_REQUEST)
-            }
+        GET("/go/{key}") { req: ServerRequest ->
+            val composeUrl = urlRepo.getUrl(req.pathVariable("key"))
+            val allHeadersAsString = getAllHeadersAsString(req)
+            urlRepo.saveRedirect(composeUrl.targetUrl ?: composeUrl.redirectUrl, allHeadersAsString)
+            ServerResponse.temporaryRedirect(URI.create(composeUrl.redirectUrl))
+                    .build().awaitSingle()
         }
-
-        ServerResponse.ok()
-                .body(BodyInserters.fromValue(array))
-                .awaitSingle()
+    contentType(MediaType.APPLICATION_JSON).nest {
+        POST("/import") { request: ServerRequest ->
+            val postBody = request.bodyToMono(String::class.java).awaitSingle()
+            val decodeFromString = Json.decodeFromString<List<String>>(postBody)
+            val array = ArrayList<String>()
+            decodeFromString.forEach { x ->
+                val url = x.trim()
+                if (url.validate()) {
+                    array.add(hostName + urlRepo.getKey(url))
+                } else {
+                    throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+                }
+            }
+            ServerResponse.ok()
+                    .body(BodyInserters.fromValue(array))
+                    .awaitSingle()
+        }
+        POST("/import/ready") { request: ServerRequest ->
+            val postBody = request.bodyToMono(String::class.java).awaitSingle()
+            val decodeFromString = Json.decodeFromString<List<ImportRequest>>(postBody)
+            var shortKey: String
+            val array = ArrayList<String>()
+            decodeFromString.forEach { entry ->
+                val key = entry.ready.trim()
+                val value = entry.target.trim()
+                if (key.validate() && value.validate()) {
+                    shortKey = urlRepo.getKey(key, value)
+                    array.add(hostName + shortKey)
+                } else {
+                    throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+                }
+            }
+            ServerResponse.ok()
+                    .body(BodyInserters.fromValue(array))
+                    .awaitSingle()
+        }
     }
-
 }
 
 fun String.validate(): Boolean = this.startsWith("http://") || this.startsWith("https://")
