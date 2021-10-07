@@ -52,6 +52,11 @@ spec:
                 secretKeyRef:
                   name: short-url-db-secret
                   key: database
+            - name: HOST_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: short-url-db-secret
+                  key: hostname
           resources:
             requests:
               memory: "128Mi"

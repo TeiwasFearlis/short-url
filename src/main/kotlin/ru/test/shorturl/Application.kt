@@ -15,6 +15,7 @@ import org.springframework.http.MediaType
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
+import org.springframework.web.reactive.function.server.awaitBody
 import org.springframework.web.reactive.function.server.coRouter
 import org.springframework.web.server.ResponseStatusException
 import java.net.URI
@@ -58,26 +59,26 @@ val apiInitializer: ApplicationContextInitializer<GenericApplicationContext> = b
 
 private fun router(hostName: String, urlRepo: Repo) = coRouter {
 
-        GET("/save") { request ->
-            val url = request.queryParam("url").get()
-            if (url.validate()) {
-                ServerResponse.ok()
-                        .body(BodyInserters.fromValue(hostName + urlRepo.getKey(request.queryParam("url").get())))
-                        .awaitSingle()
-            } else {
-                throw ResponseStatusException(HttpStatus.BAD_REQUEST)
-            }
+    GET("/save") { request ->
+        val url = request.queryParam("url").get()
+        if (url.validate()) {
+            ServerResponse.ok()
+                    .body(BodyInserters.fromValue(hostName + urlRepo.getKey(request.queryParam("url").get())))
+                    .awaitSingle()
+        } else {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST)
         }
-        GET("/go/{key}") { req: ServerRequest ->
-            val composeUrl = urlRepo.getUrl(req.pathVariable("key"))
-            val allHeadersAsString = getAllHeadersAsString(req)
-            urlRepo.saveRedirect(composeUrl.targetUrl ?: composeUrl.redirectUrl, allHeadersAsString)
-            ServerResponse.temporaryRedirect(URI.create(composeUrl.redirectUrl))
-                    .build().awaitSingle()
-        }
+    }
+    GET("/go/{key}") { req: ServerRequest ->
+        val composeUrl = urlRepo.getUrl(req.pathVariable("key"))
+        val allHeadersAsString = getAllHeadersAsString(req)
+        urlRepo.saveRedirect(composeUrl.targetUrl ?: composeUrl.redirectUrl, allHeadersAsString)
+        ServerResponse.temporaryRedirect(URI.create(composeUrl.redirectUrl))
+                .build().awaitSingle()
+    }
     contentType(MediaType.APPLICATION_JSON).nest {
         POST("/import") { request: ServerRequest ->
-            val postBody = request.bodyToMono(String::class.java).awaitSingle()
+            val postBody = request.awaitBody(String::class)
             val decodeFromString = Json.decodeFromString<List<String>>(postBody)
             val array = ArrayList<String>()
             decodeFromString.forEach { x ->
@@ -93,7 +94,7 @@ private fun router(hostName: String, urlRepo: Repo) = coRouter {
                     .awaitSingle()
         }
         POST("/import/ready") { request: ServerRequest ->
-            val postBody = request.bodyToMono(String::class.java).awaitSingle()
+            val postBody = request.awaitBody(String::class)
             val decodeFromString = Json.decodeFromString<List<ImportRequest>>(postBody)
             var shortKey: String
             val array = ArrayList<String>()
