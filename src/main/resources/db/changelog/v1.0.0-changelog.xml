@@ -17,9 +17,11 @@ http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibas
                 <constraints primaryKey="true" nullable="false" unique="true"/>
             </column>
             <column name="url" type="varchar">
-                <constraints nullable="false" unique="true"/>
+                <constraints  nullable="false"/>
             </column>
-            <column name="external_url" type="varchar">
+            <column name="group_id" type="varchar">
+            </column>
+            <column name="external_key" type="varchar">
             </column>
         </createTable>
     </changeSet>
@@ -29,14 +31,14 @@ http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibas
             <column name="id" autoIncrement="true" type="bigint">
                 <constraints primaryKey="true" nullable="false" unique="true"/>
             </column>
-            <column name="url"  type="varchar"  >
-                <constraints  nullable="false"/>
+            <column name="url" type="varchar">
+                <constraints nullable="false"/>
             </column>
             <column name="headers" type="varchar">
-                <constraints nullable="false" />
+                <constraints nullable="false"/>
             </column>
             <column name="date" type="timestamp">
-                <constraints nullable="false" />
+                <constraints nullable="false"/>
             </column>
         </createTable>
     </changeSet>

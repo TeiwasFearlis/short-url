@@ -52,7 +52,7 @@ class ShortUrlApplicationTests() {
         var key = ""
         val url = "https://www.google.com"
         assertChanges(ds) {
-            webClient.get()
+            webClient.post()
                     .uri { uriBuilder: UriBuilder ->
                         uriBuilder
                                 .path("/save")
@@ -66,8 +66,8 @@ class ShortUrlApplicationTests() {
                             throw IllegalStateException("Empty body")
                         } else {
                             val body = String(it.responseBody as ByteArray)
-                            //localhost:8080/go/h42h4h2
-                            key = body.substring(body.indexOf("go/") + 3)
+                            //localhost:8080/h42h4h2
+                            key = body.substring(body.indexOf("/") + 1)
                         }
                     }
         }.hasNumberOfChanges(1)
@@ -78,7 +78,7 @@ class ShortUrlApplicationTests() {
         assertThat(request).row().hasNumberOfColumns(1).hasOnlyNotNullValues().hasValues(url)
 
         assertChanges(ds) {
-            webClient.get().uri("/go/{key}", key)
+            webClient.get().uri("/{key}", key)
                     .exchange()
                     .expectStatus().isTemporaryRedirect
         }.hasNumberOfChanges(1)
@@ -118,7 +118,7 @@ class ShortUrlApplicationTests() {
         webClient.get()
                 .uri { uriBuilder: UriBuilder ->
                     uriBuilder
-                            .path("/go/{key}")
+                            .path("/{key}")
                             .build("hghj7ps") //ложный ключ
                 }
                 .exchange()
@@ -148,7 +148,7 @@ class ShortUrlApplicationTests() {
                             val body = String(it.responseBody as ByteArray)
                             val decodeFromString = Json.decodeFromString<ArrayList<String>>(body)
                             val get = decodeFromString.get(0)
-                            key = get.substring(get.indexOf("go/") + 3)
+                            key = get.substring(get.indexOf("/") + 1)
                         }
                     }
         }.hasNumberOfChanges(3).ofCreation().hasNumberOfChanges(3).onTable("url_table").hasNumberOfChanges(3)
@@ -198,7 +198,7 @@ class ShortUrlApplicationTests() {
                             val body = String(it.responseBody as ByteArray)
                             val decodeBody = Json.decodeFromString<ArrayList<String>>(body)
                             val get = decodeBody.get(0)
-                            key = get.substring(get.indexOf("go/") + 3)
+                            key = get.substring(get.indexOf("/") + 1)
                         }
                     }
         }.hasNumberOfChanges(3).ofCreation().hasNumberOfChanges(3).onTable("url_table").hasNumberOfChanges(3)

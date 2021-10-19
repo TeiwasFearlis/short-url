@@ -26,7 +26,7 @@ spec:
               value: public
               valueFrom: null
             - name: HOST_NAME
-              value: localhost:8080/go/
+              value: localhost:8080/
               valueFrom: null
             - name: SPRING_R2DBC_PROPERTIES_SSLMODE
               value: ALLOW

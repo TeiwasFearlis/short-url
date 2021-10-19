@@ -38,7 +38,7 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
                     cache.put(url, encodedKey)
                     return encodedKey
                 } else {
-                    val key = client.sql("INSERT INTO $schema.url_table(url,external_url)" +
+                    val key = client.sql("INSERT INTO $schema.url_table(url,external_key)" +
                             " VALUES(:url,:fullUrl)")
                             .bind("url", url)
                             .bindConditional("fullUrl", fullUrl)
@@ -55,6 +55,31 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
             }
         }
     }
+
+    override suspend fun saveImport(key: String, fullUrl: String, group: String) {
+        val existGroup = client.sql("SELECT external_key,url From $schema.url_table where group_id=:group and (external_key=:key or url=:url)")
+                .bind("group", group)//todo  сделать проверку только по уникальности ключа
+                .bind("url", fullUrl)
+                .bind("key", key)
+                .map { row: Row ->
+                    ImpUrl(
+                            row.get("external_key") as String?,
+                            row.get("url") as String?
+                    )
+                }
+                .awaitOneOrNull()
+        if (existGroup != null) {
+            return//todo завершать ошибкой что такой код уже есть в группе
+        } else {
+            client.sql("INSERT INTO $schema.url_table(external_key,url,group_id)" +
+                    " VALUES(:key,:fullUrl,:group)")
+                    .bind("key", key)
+                    .bind("fullUrl", fullUrl)
+                    .bind("group", group)
+                    .await()
+        }
+    }
+
 
     private fun DatabaseClient.GenericExecuteSpec.bindConditional(key: String, value: Any?): DatabaseClient.GenericExecuteSpec {
         return if (value == null) {
@@ -73,7 +98,6 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
                 .await()
     }
 
-
     override suspend fun getUrl(id: String): ComposeUrl {
         val returnKeyInId: Long = id.toLong(36)
         val cache = cacheManager.getCache("id")
@@ -84,12 +108,12 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
             if (result != null) {
                 return result
             } else {
-                val url = client.sql("SELECT url,external_url From $schema.url_table Where id=:key")
+                val url = client.sql("SELECT url,external_key From $schema.url_table Where id=:key")//todo modify to group
                         .bind("key", returnKeyInId)
                         .map { row: Row ->
                             ComposeUrl(
                                     row.get("url") as String,
-                                    row.get("external_url") as String?
+                                    row.get("external_key") as String?
                             )
                         }
                         .awaitSingleOrNull()

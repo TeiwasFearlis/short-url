@@ -43,7 +43,6 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
 
-
     implementation("org.liquibase:liquibase-core")
 
     testImplementation("org.springframework.boot:spring-boot-test")
