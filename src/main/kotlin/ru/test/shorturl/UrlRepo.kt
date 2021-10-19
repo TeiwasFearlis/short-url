@@ -57,19 +57,16 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
     }
 
     override suspend fun saveImport(key: String, fullUrl: String, group: String) {
-        val existGroup = client.sql("SELECT external_key,url From $schema.url_table where group_id=:group and (external_key=:key or url=:url)")
-                .bind("group", group)//todo  сделать проверку только по уникальности ключа
+        val existGroup = client.sql("SELECT external_key From $schema.url_table where group_id=:group and url=:url and external_key=:key ")
+                .bind("group", group)
                 .bind("url", fullUrl)
                 .bind("key", key)
                 .map { row: Row ->
-                    ImpUrl(
-                            row.get("external_key") as String?,
-                            row.get("url") as String?
-                    )
+                    row.get("external_key") as String?
                 }
                 .awaitOneOrNull()
         if (existGroup != null) {
-            return//todo завершать ошибкой что такой код уже есть в группе
+            throw DuplicateUrlException()
         } else {
             client.sql("INSERT INTO $schema.url_table(external_key,url,group_id)" +
                     " VALUES(:key,:fullUrl,:group)")
@@ -121,9 +118,10 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
                     cache.put(id, url)
                     url
                 } else {
-                    throw ResponseStatusException(HttpStatus.BAD_REQUEST)
+                    throw ResponseStatusException(HttpStatus.BAD_REQUEST)//todo такие ошибки должны выбрасываться веб сервисом а не внутри методов репозитория
                 }
             }
         }
     }
 }
+    class DuplicateUrlException : Exception()

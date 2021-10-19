@@ -26,8 +26,8 @@ POST http://localhost:8080/import/ready
 Content-Type: application/json
 
 {"group": "w","urls":
-[{"readyKey":"https://goo.su/7t","targetUrl":" https://infokam.su/kamyshin-ozhidayut-tumany-i-do"},
-   {"readyKey":" https://goo.su/7Tko","targetUrl": " http://admkamyshin"}]}
+[{"readyKey":"https://goo.su/7thgtрh","targetUrl":" https://infokam.su/kamyshin-ozhidayut-tumany-i-do"},
+   {"readyKey":" https://goo.su/7Tkoyrt","targetUrl": " http://admkamyshin"}]}
 
 ###
 

@@ -70,7 +70,15 @@ internal fun router(hostName: String, urlRepo: Repo) = coRouter {
                 val value = entry.targetUrl.trim()
                 if (shortUrl.validate() && value.validate()) {
                     val key = shortUrl.substring(shortUrl.lastIndexOf("/") + 1).trim()
-                    urlRepo.saveImport(key, value, group)
+                    try {
+                        urlRepo.saveImport(key, value, group)
+                    }catch (e:DuplicateUrlException){
+                        //todo add loging
+                       return@POST ServerResponse.badRequest()
+                               .bodyValue("key $key already exist")
+                                .awaitSingle()
+                    }
+
                 } else {
                     throw ResponseStatusException(HttpStatus.BAD_REQUEST)
                 }
