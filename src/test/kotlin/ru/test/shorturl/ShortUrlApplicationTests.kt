@@ -91,10 +91,10 @@ class ShortUrlApplicationTests() {
     fun `error 400`() {
         val url = "htps://www.google.com"
         assertChanges(ds) {
-            webClient.get()
+            webClient.post()
                     .uri { uriBuilder: UriBuilder ->
                         uriBuilder
-                                .path("/save/")
+                                .path("/save")
                                 .queryParam("url", url)
                                 .build()
                     }
@@ -106,7 +106,7 @@ class ShortUrlApplicationTests() {
     @Test
     fun `test failed redirect`() {
         val url = "https://www.google.com"
-        webClient.get()
+        webClient.post()
                 .uri { uriBuilder: UriBuilder ->
                     uriBuilder
                             .path("/save/")
@@ -176,9 +176,10 @@ class ShortUrlApplicationTests() {
 
     @Test
     fun `Good test post method package short url and full url, and test cache`() {
-        val url = "[{\"ready\":\" https://goo.su/7xbP \",\"target\":\" https://www.google.com\"},{\"ready\":\" https://goo.su/7XbP\",\"target\":\" https://yandex.ru\"}, " +
-                "{\"ready\":\"https://goo.su/7xBq\",\"target\": \" https://www.yahoo.com\"}] "
-        var key = ""
+        val url = "{\"group\":\"y\",\"urls\":[{\"readyKey\":\" https://goo.su/7xbP \",\"targetUrl\":\" https://www.google.com\"},{\"readyKey\":\" https://goo.su/7XbP\",\"targetUrl\":\" https://yandex.ru\"}, " +
+                "{\"readyKey\":\"https://goo.su/7xBq\",\"targetUrl\": \" https://www.yahoo.com\"}]} "
+        val key = "7xbP"
+        val group = "y"
         assertChanges(ds) {
             webClient.post()
                     .uri { uriBuilder: UriBuilder ->
@@ -191,16 +192,6 @@ class ShortUrlApplicationTests() {
                     .exchange()
                     .expectStatus()
                     .isOk
-                    .expectBody().consumeWith {
-                        if (it.responseBody == null) {
-                            throw IllegalStateException("Empty body")
-                        } else {
-                            val body = String(it.responseBody as ByteArray)
-                            val decodeBody = Json.decodeFromString<ArrayList<String>>(body)
-                            val get = decodeBody.get(0)
-                            key = get.substring(get.indexOf("/") + 1)
-                        }
-                    }
         }.hasNumberOfChanges(3).ofCreation().hasNumberOfChanges(3).onTable("url_table").hasNumberOfChanges(3)
 
         assertChanges(ds) {
@@ -214,15 +205,13 @@ class ShortUrlApplicationTests() {
                     .header("Content-Type", "application/json")
                     .exchange()
                     .expectStatus()
-                    .isOk
+                    .isBadRequest
         }.hasNumberOfChanges(0).ofCreation().hasNumberOfChanges(0).onTable("url_table")
                 .hasNumberOfChanges(0)
-        val request = Request(ds, "SELECT url From public.url_table Where id=?", key.toLong(36))
-        assertThat(request).row().hasNumberOfColumns(1).hasOnlyNotNullValues().hasValues("https://goo.su/7xbP")
-        val request2 = Request(ds, "SELECT external_url From public.url_table Where id=?", key.toLong(36))
-        assertThat(request2).row().hasNumberOfColumns(1).hasOnlyNotNullValues().hasValues("https://www.google.com")
-    }
 
+        val request = Request(ds, "SELECT url From public.url_table Where group_id=? and external_key=?",group,key)
+        assertThat(request).row().hasNumberOfColumns(1).hasOnlyNotNullValues().hasValues("https://www.google.com")
+    }
 }
 
 fun assertChanges(ds: DataSource, call: () -> Unit): ChangesAssert {

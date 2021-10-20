@@ -25,9 +25,9 @@ Content-Type: application/json
 POST http://localhost:8080/import/ready
 Content-Type: application/json
 
-{"group": "w","urls":
-[{"readyKey":"https://goo.su/7thgtрh","targetUrl":" https://infokam.su/kamyshin-ozhidayut-tumany-i-do"},
-   {"readyKey":" https://goo.su/7Tkoyrt","targetUrl": " http://admkamyshin"}]}
+{"group": "y","urls":
+[{"readyKey":"https://goo.su/7thgtрh","targetUrl":" https://www.pinterest.ru/amp/shodanglados/fghf/"},
+   {"readyKey":" https://goo.su/7Tkoyrt","targetUrl": " http://hs-manacost.ru/top-kolody/top-kolody-razbojnika/razbojnika-za-fevral-2015/fghf/"}]}
 
 ###
 
@@ -35,7 +35,7 @@ POST http://localhost:8080/save?url=https://www.profildoors.ru/catalog/seriya_sm
 ###
 
 ###
-GET localhost:8080/7qd
+GET localhost:8080/7pz
 
 ###
 POST http://localhost:8080/save?url=https://google.com
@@ -45,9 +45,10 @@ GET localhost:8080/7pv
 ###
 POST http://localhost:8080/save?url=https://profildoors-doors.ru/serija-smk/
 ###
-GET localhost:8080/7sd
+GET localhost:8080/7q1
 ###
 POST http://localhost:8080/save?url=https://chrome.google.com/webstore/detail/talend-api-tester-free-ed/aejoelaoggembcahagimdiliamlcdmfm
 ###
 GET localhost:8080/7ps
 ###
+GET localhost:8080/y/7thgtрh

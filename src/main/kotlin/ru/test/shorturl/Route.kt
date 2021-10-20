@@ -27,8 +27,8 @@ internal fun router(hostName: String, urlRepo: Repo) = coRouter {
 
     POST("/save") { request ->
         val url = request.queryParam("url").get()
-        val key = urlRepo.getKey(request.queryParam("url").get())
         if (url.validate()) {
+            val key = urlRepo.getKey(url)
             ServerResponse.ok()
                     .body(BodyInserters.fromValue(hostName + key))
                     .awaitSingle()
@@ -37,12 +37,34 @@ internal fun router(hostName: String, urlRepo: Repo) = coRouter {
         }
     }
     GET("/{key}") { req: ServerRequest ->
-        val composeUrl = urlRepo.getUrl(req.pathVariable("key"))
-        val allHeadersAsString = getAllHeadersAsString(req)
-        urlRepo.saveRedirect(composeUrl.targetUrl ?: composeUrl.redirectUrl, allHeadersAsString)
-        ServerResponse.temporaryRedirect(URI.create(composeUrl.redirectUrl))
-                .build()
-                .awaitSingle()
+        try {
+            val url = urlRepo.getUrl(req.pathVariable("key"))
+            val allHeadersAsString = getAllHeadersAsString(req)
+            urlRepo.saveRedirect(url, allHeadersAsString)
+            ServerResponse.temporaryRedirect(URI.create(url))
+                    .build()
+                    .awaitSingle()
+        } catch (e: InvalidParameter) {
+            //todo add loging
+            return@GET ServerResponse.badRequest()
+                    .bodyValue("key ${req.pathVariable("key")} not found")
+                    .awaitSingle()
+        }
+    }
+    GET("/{group}/{key}") { req: ServerRequest ->
+        try {
+            val url = urlRepo.getGroupUrl(req.pathVariable("group"), req.pathVariable("key"))
+            val allHeadersAsString = getAllHeadersAsString(req)
+            urlRepo.saveRedirect(url, allHeadersAsString)
+            ServerResponse.temporaryRedirect(URI.create(url))
+                    .build()
+                    .awaitSingle()
+        } catch (e: InvalidParameter) {
+            //todo add loging
+            return@GET ServerResponse.badRequest()
+                    .bodyValue("key ${req.pathVariable("key")} or group ${req.pathVariable("group")} not found")
+                    .awaitSingle()
+        }
     }
     contentType(MediaType.APPLICATION_JSON).nest {
         POST("/import") { request: ServerRequest ->
@@ -72,10 +94,10 @@ internal fun router(hostName: String, urlRepo: Repo) = coRouter {
                     val key = shortUrl.substring(shortUrl.lastIndexOf("/") + 1).trim()
                     try {
                         urlRepo.saveImport(key, value, group)
-                    }catch (e:DuplicateUrlException){
+                    } catch (e: DuplicateUrlException) {
                         //todo add loging
-                       return@POST ServerResponse.badRequest()
-                               .bodyValue("key $key already exist")
+                        return@POST ServerResponse.badRequest()
+                                .bodyValue("key $key already exist")
                                 .awaitSingle()
                     }
 
@@ -99,7 +121,3 @@ data class ImportRequest(val group: String, val urls: List<ReadyKeyWithUrl>)
 @Serializable
 data class ReadyKeyWithUrl(val readyKey: String, val targetUrl: String)
 
-
-data class ComposeUrl(val redirectUrl: String, val targetUrl: String?)
-
-data class ImpUrl(val shortKey: String?, val url: String?)

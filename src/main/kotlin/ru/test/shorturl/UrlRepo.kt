@@ -17,7 +17,7 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
     private val client = DatabaseClient.create(connectionFactory)
 
 
-    override suspend fun getKey(url: String, fullUrl: String?): String {
+    override suspend fun getKey(url: String): String {
         val cache = cacheManager.getCache("url")
         if (cache == null) {
             throw IllegalStateException("Mandatory cache 'url' not found!")
@@ -38,10 +38,9 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
                     cache.put(url, encodedKey)
                     return encodedKey
                 } else {
-                    val key = client.sql("INSERT INTO $schema.url_table(url,external_key)" +
-                            " VALUES(:url,:fullUrl)")
+                    val key = client.sql("INSERT INTO $schema.url_table(url)" +
+                            " VALUES(:url)")
                             .bind("url", url)
-                            .bindConditional("fullUrl", fullUrl)
                             .filter { statement, _ -> statement.returnGeneratedValues("id").execute() }
                             .fetch()
                             .first()
@@ -57,12 +56,11 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
     }
 
     override suspend fun saveImport(key: String, fullUrl: String, group: String) {
-        val existGroup = client.sql("SELECT external_key From $schema.url_table where group_id=:group and url=:url and external_key=:key ")
+        val existGroup = client.sql("SELECT url From $schema.url_table where group_id=:group and external_key=:key ")
                 .bind("group", group)
-                .bind("url", fullUrl)
                 .bind("key", key)
                 .map { row: Row ->
-                    row.get("external_key") as String?
+                    row.get("url") as String
                 }
                 .awaitOneOrNull()
         if (existGroup != null) {
@@ -95,33 +93,59 @@ open class UrlRepo(private val schema: String, connectionFactory: ConnectionFact
                 .await()
     }
 
-    override suspend fun getUrl(id: String): ComposeUrl {
+    override suspend fun getUrl(id: String): String {
         val returnKeyInId: Long = id.toLong(36)
         val cache = cacheManager.getCache("id")
         return if (cache == null) {
             throw IllegalStateException("Mandatory cache 'id' not found!")
         } else {
-            val result = cache.get(id, ComposeUrl::class.java)
+            val result = cache.get(id, String::class.java)
             if (result != null) {
                 return result
             } else {
-                val url = client.sql("SELECT url,external_key From $schema.url_table Where id=:key")//todo modify to group
+                val url = client.sql("SELECT url From $schema.url_table Where id=:key")
                         .bind("key", returnKeyInId)
                         .map { row: Row ->
-                            ComposeUrl(
-                                    row.get("url") as String,
-                                    row.get("external_key") as String?
-                            )
+                            row.get("url") as String
                         }
                         .awaitSingleOrNull()
                 if (url != null) {
                     cache.put(id, url)
                     url
                 } else {
-                    throw ResponseStatusException(HttpStatus.BAD_REQUEST)//todo такие ошибки должны выбрасываться веб сервисом а не внутри методов репозитория
+                    throw InvalidParameter()
+                }
+            }
+        }
+    }
+
+    override suspend fun getGroupUrl(group: String, key: String): String {
+        val cache = cacheManager.getCache("group")
+        return if (cache == null) {
+            throw IllegalStateException("Mandatory cache 'group' not found!")
+        } else {
+            val result = cache.get(group, String::class.java)
+            if (result != null) {
+                return result
+            } else {
+                val url = client.sql("SELECT url From $schema.url_table Where external_key=:key and group_id=:group")
+                        .bind("key", key)
+                        .bind("group", group)
+                        .map { row: Row ->
+                            row.get("url") as String
+                        }
+                        .awaitSingleOrNull()
+                if (url != null) {
+                    cache.put(group, url)
+                    url
+                } else {
+                    throw InvalidParameter()
                 }
             }
         }
     }
 }
-    class DuplicateUrlException : Exception()
+
+class DuplicateUrlException : Exception()
+
+class InvalidParameter : Exception()
